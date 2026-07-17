@@ -4,11 +4,17 @@ import time
 from PIL import Image
 from embed import initialize_models
 from st_copy import copy_button
+from pathlib import Path
 
 @st.cache_resource
 def load_model():
     return initialize_models()
 
+def load_image(relative_path):
+    base_dir = Path(__file__).resolve().parent
+    local_path = base_dir / relative_path
+    return local_path
+    
 
 collection, device, model, processor = load_model()
 
@@ -41,7 +47,7 @@ if st.button("Search") and text_input:
         st.write(results)
 
         st.header("Recommended Brands with Clothing Items")
-        col1, col2 = st.columns([0.5, 0.5])
+        col1, col2 = st.columns(2)
         col1.header("Items")
         col2.header("Clothing Item")
         
@@ -52,7 +58,8 @@ if st.button("Search") and text_input:
         ids = results["ids"][0]
         for item_id, metadata in zip(ids, metadatas):
             with col1:
-                st.write(f"{metadata['brand']} {metadata['title']}")
+                st.image(load_image(metadata["images"]), width="stretch", caption=f"{metadata['brand']} {metadata['title']}")
+                #st.write(f"{metadata['brand']} {metadata['title']}")
                 # brand_item_text = f"{metadata["brand"]} {metadata["title"]}"
 
                 # copy_button(
@@ -62,8 +69,8 @@ if st.button("Search") and text_input:
                 #     copied_label="copy_{item_id}",
                 # )
             with col2:
-                st.write("image")
-
+                st.write("")
+                #st.image(load_image(metadata["images"]))
 
 
     
