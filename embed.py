@@ -27,7 +27,7 @@ def initialize_models():
 
     return collection, device, model, processor
 
-def extract_embedding(image_path, device, model, processor):
+def open_image(image_path):
     try:
         image = Image.open(image_path)
     except FileNotFoundError:
@@ -40,11 +40,14 @@ def extract_embedding(image_path, device, model, processor):
         print(f"An unexpected error occurred: {e}, continuing...")
         return None
 
+    return image
+
+def extract_image_embedding(image, device, model, processor):
     inputs = processor(images=image, return_tensors="pt").to(device)
     with torch.no_grad():
-        image_features = model.get_image_features(**inputs)
+        image_features = model.get_image_features(**inputs).pooler_output[0].cpu().tolist()
 
-    return image_features.pooler_output[0].cpu().tolist()
+    return image_features
 
 def upload_chunk_to_chroma(collection, ids, embeddings, metadata):
     collection.add(
@@ -62,7 +65,8 @@ def run_extraction(catalog, collection, device, model, processor):
 
     for row in catalog:
         path = row["absolute_path"]
-        image_embeddings = extract_embedding(path, device, model, processor)
+        image = open_image(path)
+        image_embeddings = extract_image_embedding(image, device, model, processor)
 
         if image_embeddings is None:
             continue
