@@ -72,7 +72,7 @@ def run_extraction(catalog, collection, device, model, processor):
             continue
 
         embeddings_list.append(image_embeddings)
-        metadata_list.append({"brand" : row["brand"], "title": row["title"]})
+        metadata_list.append({"brand" : row["brand"], "title": row["title"], "images": row["relative_path"]})
         ids_list.append(str(row["uniq_id"]))
 
         if len(ids_list) >= chunk_size:

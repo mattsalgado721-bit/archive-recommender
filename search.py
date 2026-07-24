@@ -30,8 +30,28 @@ def load_image(relative_path):
     local_path = base_dir / relative_path
     return local_path
 
-def show_results(results):
-    st.header("Recommended brands with clothing items")
+def render_ui(): 
+    st.title("Archive Recommender")
+
+    uploaded_file = st.file_uploader("Upload a picture of clothing", type=["jpeg", "jpg", "png"])
+    text = st.text_input("Enter a name of a brand, a specific piece of clothing, or describe a piece of clothing", max_chars=500)
+    find_recommendations = st.button("Get recommendations")
+
+    return uploaded_file, text, find_recommendations
+
+def execute_similar_search(data, search_type, device, model, processor, collection, state_key):
+    with st.spinner("Finding the best matches...", show_time=True):
+        if search_type == "image":
+            image = open_image(data)
+            embeddings = extract_image_embedding(image, device, model, processor)
+        elif search_type == "text":
+            embeddings = extract_text_embedding(data, device, model, processor)
+
+        similar_clothing_results = get_results(collection, embeddings)
+        st.session_state[state_key] = similar_clothing_results
+
+def show_results(results, header_text):
+    st.header(header_text)
     cols = st.columns(4)
 
     metadatas = results["metadatas"][0]
@@ -110,31 +130,34 @@ def show_results(results):
 #                 st.image(load_image(metadata["images"]), width="stretch", caption=f"{metadata['brand']} {metadata['title']}")
 
 def main():
-    collection, device, model, processor = load_model()
+    try:
+        if "similar_image_results" not in st.session_state:
+            st.session_state["similar_image_results"] = None
+        if "similar_text_results" not in st.session_state:
+                st.session_state["similar_text_results"] = None
+        
+        collection, device, model, processor = load_model()
+        uploaded_file, text, find_recommendations = render_ui()
 
-    st.title("Archive Recommender")
+        if uploaded_file:
+            execute_similar_search(uploaded_file, "image", device, model, processor, collection, "similar_image_results")
 
-    uploaded_file = st.file_uploader("Upload a picture of clothing", type=["jpeg", "jpg", "png"])
-    if uploaded_file is not None:
-        image = open_image(uploaded_file)
-
-        with st.spinner("Finding the best matches...", show_time=True):
-            time.sleep(2)
-            image_embeddings = extract_image_embedding(image, device, model, processor)
-            results = get_results(collection, image_embeddings)
-            show_results(results)
+        if find_recommendations and text:
+            execute_similar_search(text, "text", device, model, processor, collection, "similar_text_results")
 
 
-    text = st.text_input("Enter a name of a brand, a specific piece of clothing, or describe a piece of clothing", max_chars=500)
+        if st.session_state["similar_image_results"]:
+            show_results(st.session_state["similar_image_results"], "Recommended Items by Image Search")
 
-    if st.button("Search") and text:
-        with st.spinner("Finding the best matches...", show_time=True):
-            time.sleep(2)
-            text_embeddings = extract_text_embedding(text, device, model, processor)
-            results = get_results(collection, text_embeddings)
-            show_results(results)
+        if st.session_state["similar_text_results"]:
+            show_results(st.session_state["similar_text_results"], "Recommended Items by Text Search")
+    except Exception as e:
+        print("An error occured while searching through the archive...")
 
-    
+
+
+
+    # st.write(st.session_state["similar_image_results"])
 
 if __name__ == "__main__":
     main()
